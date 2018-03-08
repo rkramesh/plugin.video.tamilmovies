@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="plugin.video.tamilmovies"
+version="0.1.0"
+name="Tamil Movies"
+provider-name="Rk">
+<requires>
+  <import addon="xbmc.python" version="2.24.0"/>
+  <import addon="script.module.requests" version="2.4.3"/>
+  <import addon="script.module.beautifulsoup" version="3.2.1"/>
+  <import addon="script.module.urlresolver" version="3.0.0"/>
+</requires>
+<extension point="xbmc.python.pluginsource" library="main.py">
+  <provides>video</provides>
+</extension>
+<extension point="xbmc.addon.metadata">
+    <language>it</language>
+    <platform>all</platform>
+    <summary lang="en">Tamil movies from various websites</summary>
+    <description lang="en">The latest Tamil M0vies scraped from popular websites.</description>
+    <disclaimer>This addon simply scrapes Movie website and is not liable for any content hosted on that site</disclaimer>
+    <license>GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007</license>
+    <forum>http://forum.xbmc.org/showthread.php?tid=155916</forum>
+    <website>https://github.com/rkramesh/plugin.video.tamilmovies.git</website>
+    <email></email>
+    <source>https://github.com/rkramesh/plugin.video.tamilmovies.git</source>
+  </extension>
+</addon>
