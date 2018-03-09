@@ -331,9 +331,11 @@ def list_categories(iurl):
     Create the list of categories in the Kodi interface.
     """
     
-    logging.warning("{0} {1} {2} {0}".format ('##'*15, 'list_cate',iurl))
     if iurl == tamilgunurl:
         categories = get_categories()
+        global _icon
+        _icon = _addon.getAddonInfo('path').decode("utf-8") + "/tgun.png"
+        
     else:
         categories = get_site_categories()
     listing = []
