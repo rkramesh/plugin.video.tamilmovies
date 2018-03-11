@@ -446,7 +446,10 @@ def router(paramstring):
 
     if params:
         if params['action'] == 'list_category':
-            list_movies(params['category'])
+           if 'filter' in params['category']:
+              list_movies( params['category']+'&page='+params.get("page",'1'))
+           else:
+               list_movies(params['category'])
         elif params['action'] == 'list_movie':
             list_videos(params['movie'],params['thumb'])
         elif params['action'] == 'play':
