@@ -3,5 +3,9 @@
 <category label="General">
 	<setting label="TamilGunURL" type="text" id="tamilgunurl" default="http://tamilgun.cool"/>
 	<setting label="TamilDboxURL" type="text" id="tamildboxurl" default="http://www.tamildbox.me/filter"/>
+	<setting type="action"
+                 label="Clear cache" action="RunScript($CWD/libs/commands.py,clear_cache)" />
+        <setting type="action"
+                 label="Clear all the plugin data" action="RunScript($CWD/libs/commands.py,clear_data)" />
 </category>	
 </settings>

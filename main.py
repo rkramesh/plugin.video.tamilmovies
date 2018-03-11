@@ -357,12 +357,16 @@ def list_movies(category):
     """
     movies = get_movies(category)
     listing = []
+    MenuItems = []
     for movie in movies:
         list_item = xbmcgui.ListItem(label=movie[0])
         list_item.setArt({'thumb': movie[1],
                           'icon': movie[1],
                           'fanart': movie[1]})
         list_item.setInfo('video', {'title': movie[0]})
+       # MenuItems=[('Clearall',xbmc.executebuiltin('XBMC.RunScript(special://home/addons/plugin.video.tamilmovies/libs/commands.py,clear_cache)',True))] 
+        MenuItems=[('Clearall','XBMC.RunScript(special://home/addons/plugin.video.tamilmovies/libs/commands.py,clear_cache)')]
+        list_item.addContextMenuItems(MenuItems)
         if 'Next Page' in movie[0]:
             url = '{0}?action=list_category&category={1}'.format(_url, movie[2])
         else:
