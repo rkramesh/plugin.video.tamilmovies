@@ -11,9 +11,23 @@ import os
 import xbmcgui
 import xbmc
 import xbmcvfs
+import urlresolver
+import logging
 
+
+logging.warning("{0} {1} {2} {0}".format ('##'*15, 'cmd',sys.argv))
+
+
+def resolve_url(url):
+    logging.warning("{0} {1} {2} {0}".format ('##'*15, 'cmd',url))
+    logging.warning("{0} {1} {2} {0}".format ('##'*15, 'cmd',sys.argv))
+   # stream_url = urlresolver.HostedMediaFile(url=url).resolve()
+    stream_url = 'test'
+        # If urlresolver returns false then the video url was not resolved.
+    return stream_url
 
 def clean_files(pattern):
+
     """
     Clean files by the specified pattern
 
@@ -162,6 +176,8 @@ if __name__ == '__main__':
         create_strm(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7])
     elif sys.argv[1] == 'download':
         download(sys.argv[2], sys.argv[3])
+    elif sys.argv[1] == 'resolve_url':
+        resolve_url(sys.argv[2])
     elif sys.argv[1] == 'clear_cache':
         clear_cache()
     elif sys.argv[1] == 'torrent_info':

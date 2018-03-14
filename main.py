@@ -38,6 +38,7 @@ _fanart = _addon.getAddonInfo('fanart')
 mozhdr = {'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3'}
 #tamildboxurl='http://tamildbox.me'
 
+logging.warning("{0} {1} {2} {0}".format ('##'*15, 'sysargv',sys.argv))
 
 def GetSearchQuery(sitename):
     keyboard = xbmc.Keyboard()
@@ -364,9 +365,6 @@ def list_movies(category):
                           'icon': movie[1],
                           'fanart': movie[1]})
         list_item.setInfo('video', {'title': movie[0]})
-       # MenuItems=[('Clearall',xbmc.executebuiltin('XBMC.RunScript(special://home/addons/plugin.video.tamilmovies/libs/commands.py,clear_cache)',True))] 
-        MenuItems=[('Clearall','XBMC.RunScript(special://home/addons/plugin.video.tamilmovies/libs/commands.py,clear_cache)')]
-        list_item.addContextMenuItems(MenuItems)
         if 'Next Page' in movie[0]:
             url = '{0}?action=list_category&category={1}'.format(_url, movie[2])
         else:
@@ -394,7 +392,12 @@ def list_videos(movie,thumb):
         list_item.setInfo('video', {'title': video[0]})
         list_item.setProperty('IsPlayable', 'true')
         url = '{0}?action=play&video={1}'.format(_url, video[1])
+        durl = '{0}?action=download&video={1}'.format(_url, video[1])
+        logging.warning("{0} {1} {2} {0}".format ('##'*15, 'list_video_get',durl))
         is_folder = False
+        #MenuItems=[('Clearall','XBMC.RunScript(special://home/addons/plugin.video.tamilmovies/libs/commands.py,resolve_url,'+_url+',1,'+url+')')]
+        MenuItems=[('Download Movie','XBMC.RunPlugin('+durl+')')]
+        list_item.addContextMenuItems(MenuItems)
         listing.append((url, list_item, is_folder))
 
     xbmcplugin.addDirectoryItems(_handle, listing, len(listing))
@@ -402,6 +405,7 @@ def list_videos(movie,thumb):
 
 def resolve_url(url):
     duration=7500   
+    logging.warning("{0} {1} {2} {0}".format ('##'*15, 'resolveurl',url))
     try:
         stream_url = urlresolver.HostedMediaFile(url=url).resolve()
         # If urlresolver returns false then the video url was not resolved.
@@ -433,6 +437,7 @@ def play_video(path):
         if stream_url:
             play_item.setPath(stream_url)
     # Pass the item to the Kodi player.
+    logging.warning("{0} {1} {2} {0}".format ('##'*15, 'playvideo',stream_url))
     xbmcplugin.setResolvedUrl(_handle, True, listitem=play_item)
 
 
@@ -458,6 +463,11 @@ def router(paramstring):
             list_videos(params['movie'],params['thumb'])
         elif params['action'] == 'play':
             play_video(params['video'])
+        elif params['action'] == 'download':
+            logging.warning("{0} {1} {2} {0}".format ('##'*15, 'params',params))
+            pk=resolve_url(params['video'])
+            duration=60
+            xbmc.executebuiltin('Notification(%s, %s, %d, %s)'%('Download link',pk, duration, _icon))
     else:
         list_categories(iurl='test')
 
