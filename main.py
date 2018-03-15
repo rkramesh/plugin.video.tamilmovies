@@ -395,8 +395,8 @@ def list_videos(movie,thumb):
         durl = '{0}?action=download&video={1}'.format(_url, video[1])
         logging.warning("{0} {1} {2} {0}".format ('##'*15, 'list_video_get',durl))
         is_folder = False
-        #MenuItems=[('Clearall','XBMC.RunScript(special://home/addons/plugin.video.tamilmovies/libs/commands.py,resolve_url,'+_url+',1,'+url+')')]
-        MenuItems=[('Download Movie','XBMC.RunPlugin('+durl+')')]
+        MenuItems=[('Clearall','XBMC.RunScript(special://home/addons/plugin.video.tamilmovies/libs/commands.py,download,url)')]
+        #MenuItems=[('Download Movie','XBMC.RunPlugin('+durl+')')]
         list_item.addContextMenuItems(MenuItems)
         listing.append((url, list_item, is_folder))
 

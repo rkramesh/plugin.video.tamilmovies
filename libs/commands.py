@@ -8,14 +8,36 @@
 
 import sys
 import os
-import xbmcgui
-import xbmc
 import xbmcvfs
-import urlresolver
+import xbmc, xbmcgui, xbmcplugin, xbmcaddon
+import re, requests, urllib, json
 import logging
 
 
+_addon = xbmcaddon.Addon('plugin.video.tamilmovies')
+_icon = _addon.getAddonInfo('icon')
+_fanart = _addon.getAddonInfo('fanart')
+_download_dir = _addon.getSetting('download_dir')
+
+
+
 logging.warning("{0} {1} {2} {0}".format ('##'*15, 'cmd',sys.argv))
+
+def download(url,download='test'):
+    """
+    Download torrent
+
+    :param torrent:
+    :return:
+    """
+    if _download_dir:
+        #download_torrent(torrent, os.path.join(plugin.download_dir, show_title))
+        xbmcgui.Dialog().notification('Tamil Movies', 'Movie added  for downloading.',
+                                      _icon, 3000, sound=False)
+    elif not _download_dir and xbmcgui.Dialog().yesno('Tamil Movies', 'To download movie you need',
+                                                           'to set base download directory first!',
+                                                           'Open plugin settings?'):
+        _addon.openSettings()
 
 
 def resolve_url(url):
@@ -90,21 +112,21 @@ def create_strm(filename, torrent, poster, title, season, episode):
     pass
 
 
-def download(torrent, show_title):
+def thddownload(url, title):
     """
     Download torrent
 
     :param torrent:
     :return:
     """
-    if plugin.download_dir:
+    if _download_dir:
         download_torrent(torrent, os.path.join(plugin.download_dir, show_title))
-        xbmcgui.Dialog().notification('Rarbg', 'Torrent added to YATP for downloading.',
+        xbmcgui.Dialog().notification('Tamil Movies', 'Movie added  for downloading.',
                                       plugin.icon, 3000, sound=False)
-    elif not plugin.downlaod_dir and xbmcgui.Dialog().yesno('Rarbg', 'To download torrent you need',
+    elif not _downlaod_dir and xbmcgui.Dialog().yesno('Tamil Movies', 'To download movie you need',
                                                            'to set base download directory first!',
                                                            'Open plugin settings?'):
-        plugin.addon.openSettings()
+        _addon.openSettings()
 
 
 def torrent_info(title, size, seeders, leechers):
@@ -174,10 +196,12 @@ if __name__ == '__main__':
         remove_from_favorites(sys.argv[2])
     elif sys.argv[1] == 'create_strm':
         create_strm(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6], sys.argv[7])
-    elif sys.argv[1] == 'download':
-        download(sys.argv[2], sys.argv[3])
+    elif sys.argv[1] == 'jhdownload':
+        download(sys.argv[2])
     elif sys.argv[1] == 'resolve_url':
         resolve_url(sys.argv[2])
+    elif sys.argv[1] == 'download':
+        download(sys.argv[2],'download')
     elif sys.argv[1] == 'clear_cache':
         clear_cache()
     elif sys.argv[1] == 'torrent_info':
