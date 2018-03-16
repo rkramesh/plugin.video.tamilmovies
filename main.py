@@ -20,7 +20,7 @@ import sys
 from urlparse import parse_qsl
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 from BeautifulSoup import BeautifulSoup, SoupStrainer
-import re, requests, urllib, json
+import os,re, requests, urllib, json
 import jsunpack
 import urlresolver
 import logging
@@ -32,6 +32,7 @@ _handle = int(sys.argv[1])
 _addon = xbmcaddon.Addon()
 tamilgunurl = _addon.getSetting('tamilgunurl')
 tamildboxurl = _addon.getSetting('tamildboxurl')
+_download_dir = _addon.getSetting('download_dir')
 _addonname = _addon.getAddonInfo('name')
 _icon = _addon.getAddonInfo('icon')
 _fanart = _addon.getAddonInfo('fanart')
@@ -48,6 +49,44 @@ def GetSearchQuery(sitename):
         search_text = keyboard.getText()
 
     return search_text
+
+def download(url,dest,dp = None):
+    """
+    Download torrent
+
+    :param torrent:
+    :return:
+    """
+    if _download_dir:
+        #download_torrent(torrent, os.path.join(plugin.download_dir, show_title))
+        xbmcgui.Dialog().notification('Tamil Movies', 'Movie added  for downloading.',
+                                      _icon, 3000, sound=False)
+        xbmcgui.Dialog().ok('Torrent info',url)
+        logging.warning("{0} {1} {2} {0}".format ('##'*15, 'download',url))
+
+        if not dp:
+            dp = xbmcgui.DialogProgress()
+            dp.create("FreeworldKodi Wizard","Downloading & Copying Files",' ', ' ')
+        dp.update(0)
+        dest = os.path.join(dest, 'movie')
+        url=url.split('|')[0]
+        urllib.urlretrieve(url,dest,lambda nb, bs, fs, url=url: _pbhook(nb,bs,fs,url,dp))
+
+    elif not _download_dir and xbmcgui.Dialog().yesno('Tamil Movies', 'To download movie you need',
+                                                           'to set base download directory first!',
+                                                           'Open plugin settings?'):
+        _addon.openSettings()
+
+def _pbhook(numblocks, blocksize, filesize, url, dp):
+    try:
+        percent = min((numblocks*blocksize*100)/filesize, 100)
+        dp.update(percent)
+    except:
+        percent = 100
+        dp.update(percent)
+    if dp.iscanceled():
+        raise Exception("Canceled")
+        dp.close()
 
 def get_vidhost(url):
     """
@@ -395,8 +434,8 @@ def list_videos(movie,thumb):
         durl = '{0}?action=download&video={1}'.format(_url, video[1])
         logging.warning("{0} {1} {2} {0}".format ('##'*15, 'list_video_get',durl))
         is_folder = False
-        MenuItems=[('Clearall','XBMC.RunScript(special://home/addons/plugin.video.tamilmovies/libs/commands.py,download,url)')]
-        #MenuItems=[('Download Movie','XBMC.RunPlugin('+durl+')')]
+        #MenuItems=[('Clearall','XBMC.RunScript(special://home/addons/plugin.video.tamilmovies/libs/commands.py,download,url)')]
+        MenuItems=[('Download Movie','XBMC.RunPlugin('+durl+')')]
         list_item.addContextMenuItems(MenuItems)
         listing.append((url, list_item, is_folder))
 
@@ -465,9 +504,7 @@ def router(paramstring):
             play_video(params['video'])
         elif params['action'] == 'download':
             logging.warning("{0} {1} {2} {0}".format ('##'*15, 'params',params))
-            pk=resolve_url(params['video'])
-            duration=60
-            xbmc.executebuiltin('Notification(%s, %s, %d, %s)'%('Download link',pk, duration, _icon))
+            download(resolve_url(params['video']),_download_dir,dp=None)
     else:
         list_categories(iurl='test')
 
