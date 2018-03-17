@@ -68,7 +68,7 @@ def download(url,dest,title,dp = None):
           
             if not dp:
                 dp = xbmcgui.DialogProgress()
-                dp.create("Tamil Movies","Downloading "+title,' ', ' ')
+                dp.create("Downloading "+title+"...",' ', ' ')
 
             dp.update(0)
             url=url.split('|')[0]
@@ -76,7 +76,13 @@ def download(url,dest,title,dp = None):
             ext = os.path.splitext(path)[1]
             dest = os.path.join(dest, title+ext)
             logging.warning("{0} {1} {2} {0}".format ('##'*15, 'download',dest))
-            urllib.urlretrieve(url,dest,lambda nb, bs, fs, url=url: _pbhook(nb,bs,fs,url,dp,title,start_time))
+            try:
+                urllib.urlretrieve(url,dest,lambda nb, bs, fs, url=url: _pbhook(nb,bs,fs,url,dp,title,start_time))            
+            except Exception,e:             
+                print e
+                logging.warning("{0} {1} {2} {0}".format ('##'*15, 'download-exception',e))
+ 
+
 
     elif not _download_dir and xbmcgui.Dialog().yesno('Tamil Movies', 'To download movie you need',
                                                            'to set base download directory first!',
@@ -92,11 +98,11 @@ def _pbhook(numblocks, blocksize, filesize, url, dp, title, start_time):
         else: eta = 0
         kbps_speed = kbps_speed / 1024
         total = float(filesize) / (1024 * 1024)
-        mbs = '%.02f MB of %.02f MB' % (currently_downloaded, total)
-        e = 'Speed: %.02f Kb/s ' % kbps_speed
-        e += 'ETA: %02d:%02d' % divmod(eta, 60)
+        mbs = 'Downloaded %.02f MB of %.02f MB' % (currently_downloaded, total)
+        speed = 'Speed: %.02f Kb/s ' % kbps_speed
+        eta = 'ETA: %02d:%02d' % divmod(eta, 60)
        # dia.update(percent, mbs, e)
-        dp.update(percent, mbs, e, 'Downloading '+title)
+        dp.update(percent, mbs, speed, eta)
     except:
         percent = 100
         dp.update(percent)
