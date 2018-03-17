@@ -18,6 +18,7 @@
 
 import sys
 from urlparse import parse_qsl
+import urlparse
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 from BeautifulSoup import BeautifulSoup, SoupStrainer
 import os,re, requests, urllib, json
@@ -50,7 +51,7 @@ def GetSearchQuery(sitename):
 
     return search_text
 
-def download(url,dest,dp = None):
+def download(url,dest,title,dp = None):
     """
     Download torrent
 
@@ -59,18 +60,21 @@ def download(url,dest,dp = None):
     """
     if _download_dir:
         #download_torrent(torrent, os.path.join(plugin.download_dir, show_title))
-        xbmcgui.Dialog().notification('Tamil Movies', 'Movie added  for downloading.',
-                                      _icon, 3000, sound=False)
-        xbmcgui.Dialog().ok('Torrent info',url)
-        logging.warning("{0} {1} {2} {0}".format ('##'*15, 'download',url))
+        if xbmcgui.Dialog().yesno('Download Movie',title+' will be downloaded to '+_download_dir+' directory'):
+            xbmcgui.Dialog().notification('Tamil Movies', title+' Movie added  for downloading.',
+                                         _icon, 3000, sound=False)
 
-        if not dp:
-            dp = xbmcgui.DialogProgress()
-            dp.create("FreeworldKodi Wizard","Downloading & Copying Files",' ', ' ')
-        dp.update(0)
-        dest = os.path.join(dest, 'movie')
-        url=url.split('|')[0]
-        urllib.urlretrieve(url,dest,lambda nb, bs, fs, url=url: _pbhook(nb,bs,fs,url,dp))
+            if not dp:
+                dp = xbmcgui.DialogProgress()
+                dp.create("Tamil Movies","Downloading "+title,' ', ' ')
+
+            dp.update(0)
+            url=url.split('|')[0]
+            path = urlparse.urlparse(url).path
+            ext = os.path.splitext(path)[1]
+            dest = os.path.join(dest, title+ext)
+            logging.warning("{0} {1} {2} {0}".format ('##'*15, 'download',dest))
+            urllib.urlretrieve(url,dest,lambda nb, bs, fs, url=url: _pbhook(nb,bs,fs,url,dp))
 
     elif not _download_dir and xbmcgui.Dialog().yesno('Tamil Movies', 'To download movie you need',
                                                            'to set base download directory first!',
@@ -407,20 +411,21 @@ def list_movies(category):
         if 'Next Page' in movie[0]:
             url = '{0}?action=list_category&category={1}'.format(_url, movie[2])
         else:
-            url = '{0}?action=list_movie&thumb={1}&movie={2}'.format(_url, movie[1], movie[2])
+            url = '{0}?action=list_movie&thumb={1}&movie={2}&title={3}'.format(_url, movie[1], movie[2], movie[0])
         is_folder = True
         listing.append((url, list_item, is_folder))
     xbmcplugin.addDirectoryItems(_handle, listing, len(listing))
     xbmcplugin.endOfDirectory(_handle)
  
    
-def list_videos(movie,thumb):
+def list_videos(movie,thumb,title):
     """
     Create the list of playable videos in the Kodi interface.
 
     :param category: str
     """
 
+    logging.warning("{0} {1} {2} {0}".format ('##'*15, 'list_video_movie',movie))
     videos = get_videos(movie)
     listing = []
     for video in videos:
@@ -431,11 +436,11 @@ def list_videos(movie,thumb):
         list_item.setInfo('video', {'title': video[0]})
         list_item.setProperty('IsPlayable', 'true')
         url = '{0}?action=play&video={1}'.format(_url, video[1])
-        durl = '{0}?action=download&video={1}'.format(_url, video[1])
+        durl = '{0}?action=download&video={1}&title={2}'.format(_url, video[1],title)
         logging.warning("{0} {1} {2} {0}".format ('##'*15, 'list_video_get',durl))
         is_folder = False
         #MenuItems=[('Clearall','XBMC.RunScript(special://home/addons/plugin.video.tamilmovies/libs/commands.py,download,url)')]
-        MenuItems=[('Download Movie','XBMC.RunPlugin('+durl+')')]
+        MenuItems=[('Download movie','XBMC.RunPlugin('+durl+')')]
         list_item.addContextMenuItems(MenuItems)
         listing.append((url, list_item, is_folder))
 
@@ -499,12 +504,12 @@ def router(paramstring):
            else:
                list_movies(params['category'])
         elif params['action'] == 'list_movie':
-            list_videos(params['movie'],params['thumb'])
+            list_videos(params['movie'],params['thumb'],params['title'])
         elif params['action'] == 'play':
             play_video(params['video'])
         elif params['action'] == 'download':
             logging.warning("{0} {1} {2} {0}".format ('##'*15, 'params',params))
-            download(resolve_url(params['video']),_download_dir,dp=None)
+            download(resolve_url(params['video']),_download_dir,params['title'],dp=None)
     else:
         list_categories(iurl='test')
 
