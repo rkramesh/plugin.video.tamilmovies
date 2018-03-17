@@ -6,7 +6,7 @@
 	<setting type="action"
                  label="Clear cache" action="RunScript($CWD/libs/commands.py,clear_cache)" />
         <setting type="action"
-                 label="Clear all the plugin data" action="RunScript($CWD/libs/commands.py,clear_data)" />
+                 label="Clear Download Directory" action="RunScript($CWD/libs/commands.py,clear_data)" />
 </category>	
 <category label="Download">
           <setting id="download_dir" type="folder" label="Base download folder" default="" />

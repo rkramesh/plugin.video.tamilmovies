@@ -58,11 +58,11 @@ def clean_files(pattern):
     :return: celeaning result
     :rtype: bool
     """
-    folders, files = xbmcvfs.listdir(plugin.config_dir)
+    folders, files = xbmcvfs.listdir(_download_dir)
     deleted = True
     for file_ in files:
         if pattern in file_:
-            path = os.path.join(plugin.config_dir, file_)
+            path = os.path.join(_download_dir, file_)
             xbmcvfs.delete(path)
             if xbmcvfs.exists(path):
                 deleted = False
@@ -158,10 +158,10 @@ def clear_data():
     """
     Clear all plugin persistent data
     """
-    if xbmcgui.Dialog().yesno('Rarbg TV Shows', 'Do you really want to clear all the plugin data?'):
-        if clean_files('.pcl'):
-            xbmcgui.Dialog().notification('Rarbg', 'Plugin data cleared successfully.',
-                                          plugin.icon, 3000, sound=False)
+    if xbmcgui.Dialog().yesno('TamilMovies', 'Do you really want to clear all the Download data?'):
+        if clean_files('.mp4'):
+            xbmcgui.Dialog().notification('TamilMovies', 'Download data cleared successfully.',
+                                          _icon, 3000, sound=False)
 
 
 def add_filter(tvdb, show_title):
