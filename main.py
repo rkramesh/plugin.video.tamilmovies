@@ -22,6 +22,7 @@ import urlparse
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 from BeautifulSoup import BeautifulSoup, SoupStrainer
 import os,re, requests, urllib, json
+import os, time, datetime, traceback, re, fnmatch, glob
 import jsunpack
 import urlresolver
 import logging
@@ -60,10 +61,11 @@ def download(url,dest,title,dp = None):
     """
     if _download_dir:
         #download_torrent(torrent, os.path.join(plugin.download_dir, show_title))
+        start_time = time.time()
         if xbmcgui.Dialog().yesno('Download Movie',title+' will be downloaded to '+_download_dir+' directory'):
             xbmcgui.Dialog().notification('Tamil Movies', title+' Movie added  for downloading.',
                                          _icon, 3000, sound=False)
-
+          
             if not dp:
                 dp = xbmcgui.DialogProgress()
                 dp.create("Tamil Movies","Downloading "+title,' ', ' ')
@@ -74,17 +76,27 @@ def download(url,dest,title,dp = None):
             ext = os.path.splitext(path)[1]
             dest = os.path.join(dest, title+ext)
             logging.warning("{0} {1} {2} {0}".format ('##'*15, 'download',dest))
-            urllib.urlretrieve(url,dest,lambda nb, bs, fs, url=url: _pbhook(nb,bs,fs,url,dp))
+            urllib.urlretrieve(url,dest,lambda nb, bs, fs, url=url: _pbhook(nb,bs,fs,url,dp,title,start_time))
 
     elif not _download_dir and xbmcgui.Dialog().yesno('Tamil Movies', 'To download movie you need',
                                                            'to set base download directory first!',
                                                            'Open plugin settings?'):
         _addon.openSettings()
 
-def _pbhook(numblocks, blocksize, filesize, url, dp):
+def _pbhook(numblocks, blocksize, filesize, url, dp, title, start_time):
     try:
         percent = min((numblocks*blocksize*100)/filesize, 100)
-        dp.update(percent)
+        currently_downloaded = float(numblocks) * blocksize / (1024 * 1024)
+        kbps_speed = numblocks * blocksize / (time.time() - start_time)
+        if kbps_speed > 0: eta = (filesize - numblocks * blocksize) / kbps_speed
+        else: eta = 0
+        kbps_speed = kbps_speed / 1024
+        total = float(filesize) / (1024 * 1024)
+        mbs = '%.02f MB of %.02f MB' % (currently_downloaded, total)
+        e = 'Speed: %.02f Kb/s ' % kbps_speed
+        e += 'ETA: %02d:%02d' % divmod(eta, 60)
+       # dia.update(percent, mbs, e)
+        dp.update(percent, mbs, e, 'Downloading '+title)
     except:
         percent = 100
         dp.update(percent)
