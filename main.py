@@ -53,25 +53,32 @@ def GetSearchQuery(sitename):
     return search_text
 
 #def download(url,dest,title,dp = None):
-def download(url, destination, title, dp=None, headers=None, cookies=None,
-             allow_redirects=True, verify=True, timeout=30, auth=None):
+def download(url, destination, title, verify, dp=None, headers=None, cookies=None,
+             allow_redirects=True,timeout=30, auth=None):
     """
     Download torrent
 
     :param torrent:
     :return:
     """
-    if _download_dir:
+    if verify==False:
+       xbmc.executebuiltin('XBMC.Dialog.Close(all, true)')
+       #xbmc.executebuiltin( 'Dialog.Close(9999)' )
+       #xbmc.executebuiltin( 'Container.Refresh' )
+
+    if _download_dir and verify==True:
         #download_torrent(torrent, os.path.join(plugin.download_dir, show_title))
         start_time = time.time()
         if xbmcgui.Dialog().yesno('Download Movie',title+' will be downloaded to '+_download_dir+' directory'):
             xbmcgui.Dialog().notification('Tamil Movies', title+' Movie added  for downloading.',
                                          _icon, 3000, sound=False)
-          
             if not dp:
                 dp = xbmcgui.DialogProgressBG()
                 # dp.create("Downloading "+title+"...",' ', ' ')
                 dp.create("Downloading "+title+"...")
+                window_id = xbmcgui.getCurrentWindowDialogId()
+                logging.warning("{0} {1} {2} {0}".format ('##'*15, 'dp-win',window_id))
+                logging.warning("{0} {1} {2} {0}".format ('##'*15, 'dp',dp))
 
             dp.update(0)
             url=url.split('|')[0]
@@ -114,6 +121,7 @@ def download(url, destination, title, dp=None, headers=None, cookies=None,
                             dp.update(progress, line1, line2)
                 dp.close()
                 xbmcgui.Dialog().notification('Tamil Movies', title+' Download is complete',
+                                              _icon, 3000, sound=False)
             except:
                 dp.close()
                 xbmcgui.Dialog().ok('[COLOR red]Error[/COLOR]', 'Sorry Something Went Wrong Please Try Again')
@@ -133,7 +141,7 @@ def download(url, destination, title, dp=None, headers=None, cookies=None,
 def _pbhook(numblocks, blocksize, filesize, url, dp, title, start_time):
     try:
         percent = min((numblocks*blocksize*100)/filesize, 100)
-        currently_downloaded = float(numblocks) * blocksize / (1024 * 1024)
+        currently_dofwnloaded = float(numblocks) * blocksize / (1024 * 1024)
         kbps_speed = numblocks * blocksize / (time.time() - start_time)
         if kbps_speed > 0: eta = (filesize - numblocks * blocksize) / kbps_speed
         else: eta = 0
@@ -496,11 +504,14 @@ def list_videos(movie,thumb,title):
         list_item.setProperty('IsPlayable', 'true')
         url = '{0}?action=play&video={1}'.format(_url, video[1])
         durl = '{0}?action=download&video={1}&title={2}'.format(_url, video[1],title)
+        caurl = '{0}?action=cancel&video={1}&title={2}'.format(_url, video[1],title)
         logging.warning("{0} {1} {2} {0}".format ('##'*15, 'list_video_get',durl))
         is_folder = False
         #MenuItems=[('Clearall','XBMC.RunScript(special://home/addons/plugin.video.tamilmovies/libs/commands.py,download,url)')]
-        MenuItems=[('Download movie','XBMC.RunPlugin('+durl+')')]
+        MenuItems=[('Download','XBMC.RunPlugin('+durl+')'),('Cancel Download','XBMC.RunPlugin('+caurl+')')]
+       # CancelItems=[('Cancel Download','XBMC.RunPlugin('+caurl+')')]
         list_item.addContextMenuItems(MenuItems)
+       # list_item.addContextMenuItems(CancelItems)
         listing.append((url, list_item, is_folder))
 
     xbmcplugin.addDirectoryItems(_handle, listing, len(listing))
@@ -569,6 +580,9 @@ def router(paramstring):
         elif params['action'] == 'download':
             logging.warning("{0} {1} {2} {0}".format ('##'*15, 'params',params))
             download(resolve_url(params['video']),_download_dir,params['title'],dp=None, headers=None, cookies=None, allow_redirects=True, verify=True, timeout=30, auth=None)
+        elif params['action'] == 'cancel':
+            logging.warning("{0} {1} {2} {0}".format ('##'*15, 'params',params))
+            download(resolve_url(params['video']),_download_dir,params['title'],dp=None, headers=None, cookies=None, allow_redirects=True, verify=False, timeout=30, auth=None)
     else:
         list_categories(iurl='test')
 
