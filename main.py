@@ -113,6 +113,7 @@ def download(url, destination, title, dp=None, headers=None, cookies=None,
                             line2 += ' ETA: [COLOR darkgoldenrod]%02d:%02d[/COLOR]' %divmod(eta, 60)
                             dp.update(progress, line1, line2)
                 dp.close()
+                xbmcgui.Dialog().notification('Tamil Movies', title+' Download is complete',
             except:
                 dp.close()
                 xbmcgui.Dialog().ok('[COLOR red]Error[/COLOR]', 'Sorry Something Went Wrong Please Try Again')
