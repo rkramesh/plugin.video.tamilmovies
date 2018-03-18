@@ -18,11 +18,14 @@
 
 import sys
 from urlparse import parse_qsl
+import urlparse
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 from BeautifulSoup import BeautifulSoup, SoupStrainer
-import re, requests, urllib, json
+import os,re, requests, urllib, json
+import os, time, datetime, traceback, re, fnmatch, glob
 import jsunpack
 import urlresolver
+import logging
 
 # Get the plugin url in plugin:// notation.
 _url = sys.argv[0]
@@ -30,12 +33,15 @@ _url = sys.argv[0]
 _handle = int(sys.argv[1])
 _addon = xbmcaddon.Addon()
 tamilgunurl = _addon.getSetting('tamilgunurl')
+tamildboxurl = _addon.getSetting('tamildboxurl')
+_download_dir = _addon.getSetting('download_dir')
 _addonname = _addon.getAddonInfo('name')
 _icon = _addon.getAddonInfo('icon')
 _fanart = _addon.getAddonInfo('fanart')
 mozhdr = {'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3'}
+#tamildboxurl='http://tamildbox.me'
 
-print tamilgunurl
+logging.warning("{0} {1} {2} {0}".format ('##'*15, 'sysargv',sys.argv))
 
 def GetSearchQuery(sitename):
     keyboard = xbmc.Keyboard()
@@ -45,6 +51,104 @@ def GetSearchQuery(sitename):
         search_text = keyboard.getText()
 
     return search_text
+
+#def download(url,dest,title,dp = None):
+def download(url, destination, title, dp=None, headers=None, cookies=None,
+             allow_redirects=True, verify=True, timeout=30, auth=None):
+    """
+    Download torrent
+
+    :param torrent:
+    :return:
+    """
+    if _download_dir:
+        #download_torrent(torrent, os.path.join(plugin.download_dir, show_title))
+        start_time = time.time()
+        if xbmcgui.Dialog().yesno('Download Movie',title+' will be downloaded to '+_download_dir+' directory'):
+            xbmcgui.Dialog().notification('Tamil Movies', title+' Movie added  for downloading.',
+                                         _icon, 3000, sound=False)
+          
+            if not dp:
+                dp = xbmcgui.DialogProgressBG()
+                # dp.create("Downloading "+title+"...",' ', ' ')
+                dp.create("Downloading "+title+"...")
+
+            dp.update(0)
+            url=url.split('|')[0]
+            path = urlparse.urlparse(url).path
+            ext = os.path.splitext(path)[1]
+            destination = os.path.join(destination, title+ext)
+            #logging.warning("{0} {1} {2} {0}".format ('##'*15, 'download',dest))
+            #try:
+                #urllib.urlretrieve(url,dest,lambda nb, bs, fs, url=url: _pbhook(nb,bs,fs,url,dp,title,start_time))            
+                ##
+
+            try:
+                with open(destination, 'wb') as f:
+                    start = time.time()
+                    r = requests.get(url, headers=headers, cookies=cookies,
+                                     allow_redirects=allow_redirects, verify=verify,
+                                     timeout=timeout, auth=auth, stream=True)
+                    content_length = int(r.headers.get('content-length'))
+                    if content_length is None:
+                        f.write(r.content)
+                    else:
+                        dl = 0
+                        for chunk in r.iter_content(chunk_size=content_length/100):
+                            dl += len(chunk)
+                            if chunk:
+                                f.write(chunk)
+                            progress = (dl * 100 / content_length)
+                            byte_speed = dl / (time.time() - start)
+                            kbps_speed = byte_speed / 1024
+                            mbps_speed = kbps_speed / 1024
+                            downloaded = float(dl) / (1024 * 1024)
+                            file_size = float(content_length) / (1024 * 1024)
+                            if byte_speed > 0:
+                                eta = (content_length - dl) / byte_speed
+                            else:
+                                eta = 0
+                            line1 = '[COLOR darkgoldenrod]%.1f Mb[/COLOR] Of [COLOR darkgoldenrod]%.1f Mb[/COLOR]' %(downloaded, file_size)
+                            line2 = 'Speed: [COLOR darkgoldenrod]%.01f Mbps[/COLOR]' %mbps_speed
+                            line2 += ' ETA: [COLOR darkgoldenrod]%02d:%02d[/COLOR]' %divmod(eta, 60)
+                            dp.update(progress, line1, line2)
+                dp.close()
+            except:
+                dp.close()
+                xbmcgui.Dialog().ok('[COLOR red]Error[/COLOR]', 'Sorry Something Went Wrong Please Try Again')
+                    ##
+            '''        
+            except Exception,e:             
+                print e
+                logging.warning("{0} {1} {2} {0}".format ('##'*15, 'download-exception',e))
+            '''
+
+
+    elif not _download_dir and xbmcgui.Dialog().yesno('Tamil Movies', 'To download movie you need',
+                                                           'to set base download directory first!',
+                                                           'Open plugin settings?'):
+        _addon.openSettings()
+
+def _pbhook(numblocks, blocksize, filesize, url, dp, title, start_time):
+    try:
+        percent = min((numblocks*blocksize*100)/filesize, 100)
+        currently_downloaded = float(numblocks) * blocksize / (1024 * 1024)
+        kbps_speed = numblocks * blocksize / (time.time() - start_time)
+        if kbps_speed > 0: eta = (filesize - numblocks * blocksize) / kbps_speed
+        else: eta = 0
+        kbps_speed = kbps_speed / 1024
+        total = float(filesize) / (1024 * 1024)
+        mbs = 'Downloaded %.02f MB of %.02f MB' % (currently_downloaded, total)
+        speed = 'Speed: %.02f Kb/s ' % kbps_speed
+        eta = 'ETA: %02d:%02d' % divmod(eta, 60)
+       # dia.update(percent, mbs, e)
+        dp.update(percent, mbs, speed, eta)
+    except:
+        percent = 100
+        dp.update(percent)
+    if dp.iscanceled():
+        raise Exception("Canceled")
+        dp.close()
 
 def get_vidhost(url):
     """
@@ -155,6 +259,14 @@ def resolve_media(url,videos):
 
     return
 
+def get_site_categories():
+    items = {}
+    sno = 1
+    items[str(sno)+'[COLOR blue]TAMILDBOX[/COLOR]'] = tamildboxurl 
+    sno+=1
+    items[str(sno)+'[COLOR blue]TAMILGUN[/COLOR]'] = tamilgunurl 
+    return items
+
 def get_categories():
     """
     Get the list of categories.
@@ -172,6 +284,7 @@ def get_categories():
         items[str(sno)+cat[1]] = cat[0]
         sno+=1
     items[str(sno)+'[COLOR yellow]** Search **[/COLOR]'] = bu + '/?s='
+        
     return items
     
 def get_movies(iurl):
@@ -181,37 +294,74 @@ def get_movies(iurl):
     """
     movies = []
     
+    logging.warning("{0} {1} {2} {0}".format ('##'*15, 'getmovies',iurl))
     if iurl[-3:] == '?s=':
         search_text = GetSearchQuery('TamilGun')
         search_text = urllib.quote_plus(search_text)
         iurl += search_text
 
-    html = requests.get(iurl, headers=mozhdr).text
-    mlink = SoupStrainer('article', {'class':re.compile('video')})
-    items = BeautifulSoup(html, parseOnlyThese=mlink)
-    plink = SoupStrainer('ul', {'class':'page-numbers'})
-    Paginator = BeautifulSoup(html, parseOnlyThese=plink)
+    if 'tamildbox' in iurl:
+        logging.warning("{0} {1} {2} {0}".format ('##'*15, 'dbox-iurl',iurl))
+        html = requests.get(iurl, headers=mozhdr).text
+        tlink = SoupStrainer('div', {'class':re.compile('listbox')})
+        items = BeautifulSoup(html, parseOnlyThese=tlink)       
+        plink = SoupStrainer('div', {'class':'pagination'})
+        Paginator = BeautifulSoup(html, parseOnlyThese=plink)
 
-    for item in items:
-        title = item.h3.text
-        url = item.h3.find('a')['href']
-        try:
-            thumb = item.find('img')['src'].strip()
-        except:
-            thumb = _icon
-        movies.append((title, thumb, url))
-    
-    if 'next' in str(Paginator):
-        nextli = Paginator.find('a', {'class':re.compile('next')})
-        purl = nextli.get('href')
-        if 'http' not in purl:
-            purl = self.bu[:-12] + purl
-        currpg = Paginator.find('span', {'class':re.compile('current')}).text
-        pages = Paginator.findAll('a', {'class':re.compile('^page')})
-        lastpg = pages[len(pages)-1].text
-        title = 'Next Page.. (Currently in Page %s of %s)' % (currpg,lastpg)
-        movies.append((title, _icon, purl))
-   
+        for item in items:
+            title = item.h4.text
+            url = item.find( 'div', attrs={'class' : 'btn btn-primary watch'}).find('a', href=True)['href']
+            try:
+                thumb = item.find('img')['src'].strip()
+            except:
+                thumb = _icon
+            movies.append((title, thumb, url))
+
+        logging.warning("{0} {1} {2} {0}".format ('##'*15, 'dbox-Pagintor',Paginator))
+        if 'current' in str(Paginator):
+            purl = Paginator.find('span', {'class':re.compile('current')}).findNext('a')['href']
+            if 'http' not in purl:
+                purl=url
+            currpg = Paginator.find('span', {'class':re.compile('current')}).text
+            lastpg = Paginator.findAll('a',text=True)[-1]
+            title = 'Next Page.. (Currently in Page %s of %s)' % (currpg,lastpg)
+            movies.append((title, _icon, purl))
+
+
+    if 'gun' in iurl:
+        if iurl == tamilgunurl:
+            list_categories(iurl)
+
+        logging.warning("{0} {1} {2} {0}".format ('##'*15, 'tgun-iurl',iurl))
+        html = requests.get(iurl, headers=mozhdr).text
+        mlink = SoupStrainer('article', {'class':re.compile('video')})
+        items = BeautifulSoup(html, parseOnlyThese=mlink)
+        plink = SoupStrainer('ul', {'class':'page-numbers'})
+        Paginator = BeautifulSoup(html, parseOnlyThese=plink)
+
+        for item in items:
+            title = item.h3.text
+            url = item.h3.find('a')['href']
+            try:
+                thumb = item.find('img')['src'].strip()
+            except:
+                thumb = _icon
+            movies.append((title, thumb, url))
+        
+        logging.warning("{0} {1} {2} {0}".format ('##'*15, 'tgun-Pagintor',Paginator))
+        if 'next' in str(Paginator):
+            nextli = Paginator.find('a', {'class':re.compile('next')})
+            logging.warning("{0} {1} {2} {0}".format ('##'*15, 'Pagintor',nextli))
+            purl = nextli.get('href')
+            if 'http' not in purl:
+                purl = self.bu[:-12] + purl
+            currpg = Paginator.find('span', {'class':re.compile('current')}).text
+            pages = Paginator.findAll('a', {'class':re.compile('^page')})
+            logging.warning("{0} {1} {2} {0}".format ('##'*15, 'Pages',pages))
+            lastpg = pages[len(pages)-1].text
+            title = 'Next Page.. (Currently in Page %s of %s)' % (currpg,lastpg)
+            movies.append((title, _icon, purl))
+
     return movies
 
 
@@ -222,6 +372,10 @@ def get_videos(url):
     """
     videos = []
     if 'cinebix.com' in url:
+        resolve_media(url,videos)
+        return videos
+
+    if 'tamildbox' in url:
         resolve_media(url,videos)
         return videos
         
@@ -274,11 +428,18 @@ def get_videos(url):
     return videos
 
 
-def list_categories():
+def list_categories(iurl):
     """
     Create the list of categories in the Kodi interface.
     """
-    categories = get_categories()
+    
+    if iurl == tamilgunurl:
+        categories = get_categories()
+        global _icon
+        _icon = _addon.getAddonInfo('path').decode("utf-8") + "/tgun.png"
+        
+    else:
+        categories = get_site_categories()
     listing = []
     for title,iurl in sorted(categories.iteritems()):
         list_item = xbmcgui.ListItem(label=title[1:])
@@ -298,6 +459,7 @@ def list_movies(category):
     """
     movies = get_movies(category)
     listing = []
+    MenuItems = []
     for movie in movies:
         list_item = xbmcgui.ListItem(label=movie[0])
         list_item.setArt({'thumb': movie[1],
@@ -307,20 +469,21 @@ def list_movies(category):
         if 'Next Page' in movie[0]:
             url = '{0}?action=list_category&category={1}'.format(_url, movie[2])
         else:
-            url = '{0}?action=list_movie&thumb={1}&movie={2}'.format(_url, movie[1], movie[2])
+            url = '{0}?action=list_movie&thumb={1}&movie={2}&title={3}'.format(_url, movie[1], movie[2], movie[0])
         is_folder = True
         listing.append((url, list_item, is_folder))
     xbmcplugin.addDirectoryItems(_handle, listing, len(listing))
     xbmcplugin.endOfDirectory(_handle)
  
    
-def list_videos(movie,thumb):
+def list_videos(movie,thumb,title):
     """
     Create the list of playable videos in the Kodi interface.
 
     :param category: str
     """
 
+    logging.warning("{0} {1} {2} {0}".format ('##'*15, 'list_video_movie',movie))
     videos = get_videos(movie)
     listing = []
     for video in videos:
@@ -331,7 +494,12 @@ def list_videos(movie,thumb):
         list_item.setInfo('video', {'title': video[0]})
         list_item.setProperty('IsPlayable', 'true')
         url = '{0}?action=play&video={1}'.format(_url, video[1])
+        durl = '{0}?action=download&video={1}&title={2}'.format(_url, video[1],title)
+        logging.warning("{0} {1} {2} {0}".format ('##'*15, 'list_video_get',durl))
         is_folder = False
+        #MenuItems=[('Clearall','XBMC.RunScript(special://home/addons/plugin.video.tamilmovies/libs/commands.py,download,url)')]
+        MenuItems=[('Download movie','XBMC.RunPlugin('+durl+')')]
+        list_item.addContextMenuItems(MenuItems)
         listing.append((url, list_item, is_folder))
 
     xbmcplugin.addDirectoryItems(_handle, listing, len(listing))
@@ -339,6 +507,7 @@ def list_videos(movie,thumb):
 
 def resolve_url(url):
     duration=7500   
+    logging.warning("{0} {1} {2} {0}".format ('##'*15, 'resolveurl',url))
     try:
         stream_url = urlresolver.HostedMediaFile(url=url).resolve()
         # If urlresolver returns false then the video url was not resolved.
@@ -370,6 +539,7 @@ def play_video(path):
         if stream_url:
             play_item.setPath(stream_url)
     # Pass the item to the Kodi player.
+    logging.warning("{0} {1} {2} {0}".format ('##'*15, 'playvideo',stream_url))
     xbmcplugin.setResolvedUrl(_handle, True, listitem=play_item)
 
 
@@ -387,13 +557,19 @@ def router(paramstring):
 
     if params:
         if params['action'] == 'list_category':
-            list_movies(params['category'])
+           if 'filter' in params['category']:
+              list_movies( params['category']+'&page='+params.get("page",'1'))
+           else:
+               list_movies(params['category'])
         elif params['action'] == 'list_movie':
-            list_videos(params['movie'],params['thumb'])
+            list_videos(params['movie'],params['thumb'],params['title'])
         elif params['action'] == 'play':
             play_video(params['video'])
+        elif params['action'] == 'download':
+            logging.warning("{0} {1} {2} {0}".format ('##'*15, 'params',params))
+            download(resolve_url(params['video']),_download_dir,params['title'],dp=None, headers=None, cookies=None, allow_redirects=True, verify=True, timeout=30, auth=None)
     else:
-        list_categories()
+        list_categories(iurl='test')
 
 
 if __name__ == '__main__':
