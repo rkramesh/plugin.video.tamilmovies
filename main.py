@@ -19,6 +19,7 @@
 import sys
 from urlparse import parse_qsl
 import urlparse
+import urllib2
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 from BeautifulSoup import BeautifulSoup, SoupStrainer
 import os,re, requests, urllib, json
@@ -475,10 +476,11 @@ def list_movies(category):
                           'icon': movie[1],
                           'fanart': movie[1]})
         list_item.setInfo('video', {'title': movie[0]})
+        logging.warning("{0} {1} {2} {0}".format ('??'*15, 'list_movie',movie))
         if 'Next Page' in movie[0]:
             url = '{0}?action=list_category&category={1}'.format(_url, movie[2])
         else:
-            url = '{0}?action=list_movie&thumb={1}&movie={2}&title={3}'.format(_url, movie[1], movie[2], movie[0])
+            url = '{0}?action=list_movie&thumb={1}&movie={2}&title={3}'.format(_url, movie[1], movie[2], movie[0].encode('ascii', 'ignore').decode('ascii'))
         is_folder = True
         listing.append((url, list_item, is_folder))
     xbmcplugin.addDirectoryItems(_handle, listing, len(listing))
