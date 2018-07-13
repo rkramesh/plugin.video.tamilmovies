@@ -160,6 +160,19 @@ def _pbhook(numblocks, blocksize, filesize, url, dp, title, start_time):
         raise Exception("Canceled")
         dp.close()
 
+def convert(url):
+    if url.startswith('//'):
+        return 'http://' + url[len('//'):]
+    return url
+
+def get_strm(url):
+    link = requests.get(url, headers=mozhdr).text
+    soup = BeautifulSoup(link)
+    rawJ = soup.findAll('script')
+    J = str(rawJ[4])
+    rk=J.split('var mainVideo = ')[1].rsplit('var vastUrl =')[0].rsplit(';', 1)[0]
+    return rk
+
 def get_vidhost(url):
     """
     Trim the url to get the video hoster
@@ -172,50 +185,19 @@ def get_vidhost(url):
 def resolve_media(url,videos):
 
     non_str_list = ['#', 'magnet:', 'desihome.co', 'thiruttuvcd',
-                    'cineview', 'bollyheaven', 'videolinkz',
+                    'lcineview', 'bollyheaven', 'videolinkz',
                     'imdb.', 'mgid.', 'facebook.', 'm2pub', 
                     'tamilraja.org']
 
     embed_list = ['cineview', 'bollyheaven', 'videolinkz', 'vidzcode',
                   'embedzone', 'embedsr', 'fullmovie-hd', 'adly.biz',
-                  'embedscr', 'embedrip', 'movembed', 'power4link.us',
+                  'embedscr', 'hls_stream', 'embedrip', 'movembed', 'power4link.us',
                   'techking.me', 'onlinemoviesworld.xyz', 'cinebix.com']
 
-    if 'tamildbox' in url:
-        link = requests.get(url, headers=mozhdr).text
-        try:
-            mlink = SoupStrainer('div', {'id':'player-embed'})
-            dclass = BeautifulSoup(link, parseOnlyThese=mlink)       
-            if 'unescape' in str(dclass):
-                etext = re.findall("unescape.'[^']*", str(dclass))[0]
-                etext = urllib.unquote(etext)
-                dclass = BeautifulSoup(etext)
-            glink = dclass.iframe.get('src')
-            vidhost = get_vidhost(glink)
-            videos.append((vidhost,glink))
-            mlink = SoupStrainer('div', {'class':'item-content toggled'})
-            dclass = BeautifulSoup(link, parseOnlyThese=mlink)
-            glink = dclass.p.iframe.get('src')
-            vidhost = get_vidhost(glink)
-            videos.append((vidhost,glink))
-        except:
-            pass
-        
-        try:
-            codes = re.findall('"return loadEP.([^,]*),(\d*)',link)
-            for ep_id, server_id in codes:
-                burl = 'http://www.tamildbox.com/actions.php?case=loadEP&ep_id=%s&server_id=%s'%(ep_id,server_id)
-                bhtml = requests.get(burl,headers=mozhdr).text
-                blink = re.findall('(?i)iframe\s*src="(.*?)"',bhtml)[0]
-                vidhost = get_vidhost(blink)
-                if 'googleapis' in blink:
-                    blink = 'https://drive.google.com/open?id=' + re.findall('docid=([^&]*)',blink)[0]
-                    vidhost = 'GVideo'
-                videos.append((vidhost,blink))   
-        except:
-            pass
-
-    elif any([x in url for x in embed_list]):
+    logging.warning("{0} {1} {2} {0}".format ('11'*15, 'before',url))
+    url=convert(url)    
+    logging.warning("{0} {1} {2} {0}".format ('22'*15, 'after',url))
+    if any ([x in url for x in embed_list]):
         clink = requests.get(url, headers=mozhdr).text
         csoup = BeautifulSoup(clink)
         try:
@@ -224,6 +206,17 @@ def resolve_media(url,videos):
                 if not any([x in strurl for x in non_str_list]):
                     vidhost = get_vidhost(strurl)
                     videos.append((vidhost,strurl))
+        except:
+            pass
+
+        try:
+                rawJ = csoup.findAll('script')
+                J = str(rawJ[4])
+                rk=J.split('var mainVideo = ')[1].rsplit('var vastUrl =')[0].rsplit(';', 1)[0]
+                logging.warning("{0} {1} {2} {0}".format ('##'*15, 'play-list',rk))
+                strm_url=rk.replace('\'', '') 
+                vidhost = get_vidhost(url)
+                videos.append((vidhost,strm_url))
         except:
             pass
 
@@ -262,8 +255,69 @@ def resolve_media(url,videos):
                     videos.append((vidhost,strurl))
         except:
             pass
-            
+
+    elif 'tamildbox' in url:
+        logging.warning("{0} {1} {2} {0}".format ('##'*15, 'embed-list',url))
+        link = requests.get(url, headers=mozhdr).text
+        try:
+            mlink = SoupStrainer('div', {'id':'player-embed'})
+            dclass = BeautifulSoup(link, parseOnlyThese=mlink)       
+            if 'unescape' in str(dclass):
+                etext = re.findall("unescape.'[^']*", str(dclass))[0]
+                etext = urllib.unquote(etext)
+                dclass = BeautifulSoup(etext)
+            glink = dclass.iframe.get('src')
+            vidhost = get_vidhost(glink)
+            videos.append((vidhost,glink))
+            mlink = SoupStrainer('div', {'class':'item-content toggled'})
+            dclass = BeautifulSoup(link, parseOnlyThese=mlink)
+            glink = dclass.p.iframe.get('src')
+            vidhost = get_vidhost(glink)
+            videos.append((vidhost,glink))
+        except:
+            pass
+                
+        try:
+                rawJ = csoup.findAll('script')
+                J = str(rawJ[4])
+                rk=J.split('var mainVideo = ')[1].rsplit('var vastUrl =')[0].rsplit(';', 1)[0]
+                logging.warning("{0} {1} {2} {0}".format ('##'*15, 'play-list',rk))
+                strm_url=rk.replace('\'', '') 
+                vidhost = get_vidhost(url)
+                videos.append((vidhost,strm_url))
+        except:
+            pass
+
+
+        try:
+            codes = re.findall('"return loadEP.([^,]*),(\d*)',link)
+            for ep_id, server_id in codes:
+#                burl = 'http://www.tamildbox.com/actions.php?case=loadEP&ep_id=%s&server_id=%s'%(ep_id,server_id)
+                burl = 'http://www.tamildbox.us/actions.php?case=loadEP&ep_id=%s&server_id=%s'%(ep_id,server_id)
+                bhtml = requests.get(burl,headers=mozhdr).text
+                logging.warning("{0} {1} {2} {0}".format ('##'*15, 'ep-url',bhtml))
+                soup = BeautifulSoup(bhtml)
+#               blin1k = re.findall('(?i)iframe\s*src="(.*?)"',bhtml)[0]
+                blink = soup.find('iframe')['src']
+                logging.warning("{0} {1} {2} {0}".format ('##'*15, 'ep-loaded-linkd',blink))
+                vidhost = get_vidhost(blink)
+                if 'googleapis' in blink:
+                    blink = 'https://drive.google.com/open?id=' + re.findall('docid=([^&]*)',blink)[0]
+                    vidhost = 'GVideo'
+                    videos.append((vidhost,blink))   
+                elif 'hls_stream' in blink:
+                    resolve_media(blink,videos)
+                elif 'player.php' in blink:
+                    pass
+                else:
+                    videos.append((vidhost,blink))   
+
+
+        except:
+            pass
+
     elif not any([x in url for x in non_str_list]):
+        logging.warning("{0} {1} {2} {0}".format ('##'*15, 'embed-list',url))
         vidhost = get_vidhost(url)
         videos.append((vidhost,url))
 
@@ -387,8 +441,9 @@ def get_videos(url):
 
     if 'tamildbox' in url:
         resolve_media(url,videos)
+        logging.warning("{0} {1} {2} {0}".format ('##'*15, 'tamildbox-',url))
         return videos
-        
+
     html = requests.get(url, headers=mozhdr).text
 
     try:
@@ -480,7 +535,9 @@ def list_movies(category):
         if 'Next Page' in movie[0]:
             url = '{0}?action=list_category&category={1}'.format(_url, movie[2])
         else:
-            url = '{0}?action=list_movie&thumb={1}&movie={2}&title={3}'.format(_url, movie[1], movie[2], movie[0].encode('ascii', 'ignore').decode('ascii'))
+#            url = '{0}?action=list_movie&thumb={1}&movie={2}&title={3}'.format(_url, movie[1], movie[2], movie[0].encode('ascii', 'ignore').decode('ascii'))
+            url = '{0}?action=list_movie&thumb={1}&movie={2}&title={3}'.format(_url, movie[1], movie[2], ''.join(e for e in movie[0] if e.isalnum()))
+
         is_folder = True
         listing.append((url, list_item, is_folder))
     xbmcplugin.addDirectoryItems(_handle, listing, len(listing))
@@ -547,13 +604,14 @@ def play_video(path):
     """
     # Create a playable item with a path to play.
     play_item = xbmcgui.ListItem(path=path)
+    logging.warning("{0} {1} {2} {0}".format ('&&'*15, 'playvid_url',play_item))
     vid_url = play_item.getfilename()
     if 'tamilgun' not in vid_url:
         stream_url = resolve_url(vid_url)
         if stream_url:
             play_item.setPath(stream_url)
     # Pass the item to the Kodi player.
-    logging.warning("{0} {1} {2} {0}".format ('##'*15, 'playvideo',stream_url))
+    logging.warning("{0} {1} {2} {0}".format ('##'*15, 'play--video',stream_url))
     xbmcplugin.setResolvedUrl(_handle, True, listitem=play_item)
 
 
